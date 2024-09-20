@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F5F5F5"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+
+    <!-- Form Section -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/form_background"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- Step 2: Datos de Mantenimiento -->
+
+        <!-- Maintenance Task Dropdown -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+            <TextView
+                android:id="@+id/step2Number"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:background="@drawable/circle_green"
+                android:gravity="center"
+                android:text=""
+                android:textColor="@android:color/white"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/step2Label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:text="Seleccionar área de trabajo"
+                android:textColor="#000000"
+                android:textSize="30sp"
+                android:textstyle="bold" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/ambienteLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="13dp"
+            android:layout_marginBottom="8dp"
+            android:text="Seleccionar ubicación"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <Spinner
+            android:id="@+id/areaSpinner"
+            android:layout_width="347dp"
+            android:layout_height="33dp"
+            android:layout_marginBottom="10dp"
+            android:background="@drawable/rounded_edittext_background" />
+
+
+        <!-- Continue Button -->
+        <Button
+            android:id="@+id/mantenimientoButton"
+            android:layout_width="268dp"
+            android:layout_height="77dp"
+            android:layout_marginTop="25dp"
+            android:layout_gravity="center"
+            android:backgroundTint="#4CAF50"
+            android:padding="16dp"
+            android:text="Registrar mantenimiento"
+            android:textColor="@android:color/white"
+            android:drawableLeft="@drawable/mantenimiento"
+            android:textSize="18sp" />
+
+        <!-- Continue Button -->
+        <Button
+            android:id="@+id/incidenciaButton"
+            android:layout_width="268dp"
+            android:layout_height="77dp"
+            android:layout_marginTop="16dp"
+            android:backgroundTint="#4CAF50"
+            android:padding="16dp"
+            android:layout_gravity="center"
+            android:text="Registrar incidencia"
+            android:textColor="@android:color/white"
+            android:drawableLeft="@drawable/incidencia"
+            android:textSize="18sp" />
+
+        <!-- Continue Button -->
+        <Button
+            android:id="@+id/logoutButton"
+            android:layout_width="268dp"
+            android:layout_height="77dp"
+            android:layout_marginTop="16dp"
+            android:backgroundTint="#4CAF50"
+            android:padding="16dp"
+            android:text="Cerrar sesion"
+            android:layout_gravity="center"
+            android:textColor="@android:color/white"
+            android:drawableLeft="@drawable/logout"
+            android:textSize="18sp" />
+
+    </LinearLayout>
+
+
+
+</LinearLayout>
