@@ -28,6 +28,7 @@ import android.provider.MediaStore
 import android.location.Location
 import android.net.Uri
 import android.util.Log
+import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.Spinner
@@ -48,18 +49,27 @@ class MainActivity : AppCompatActivity() {
     private lateinit var textViewLatLong: TextView
     private lateinit var locationManager: LocationManager
     private lateinit var currentPhotoPath: String
+    private lateinit var selectedArea: String
     private val client = OkHttpClient()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_main)
+        val selectedArea = intent.getStringExtra("SELECTED_AREA")
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
 
+
+        //enviar y regresar
+        val enviarButton: Button = findViewById(R.id.continueButton)
+        enviarButton.setOnClickListener {
+            val intent = Intent(this, AreasActivity::class.java)
+            startActivity(intent)
+        }
 
         textViewLatLong = findViewById(R.id.textViewLatLong)
         locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
@@ -74,7 +84,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun sendPostRequest(imagePath: String, lat: Double, lon: Double,  comment: String, tipo: String)  {
+    private fun sendPostRequest(imagePath: String, lat: Double, lon: Double,  comment: String, tipo: String, area: String)  {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val imageBytes = resizeImage(imagePath, 1024, 1024)
@@ -85,7 +95,8 @@ class MainActivity : AppCompatActivity() {
                 "lat": $lat,
                 "longitude": $lon,
                 "Comentario": "$comment",
-                "IdTipoMantenimiento": "$tipo"
+                "IdTipoMantenimiento": "$tipo",
+                "Ubicacion": "$area"
             }""" // Escape newlines and carriage returns
                 val requestBody: RequestBody = json.toRequestBody("application/json".toMediaTypeOrNull())
                 val request = Request.Builder()
@@ -167,7 +178,7 @@ class MainActivity : AppCompatActivity() {
                 val comment = findViewById<EditText>(R.id.commentEditText).text.toString()
                 val tipo = findViewById<Spinner>(R.id.tipoSpinner).selectedItem.toString()
 
-                sendPostRequest(currentPhotoPath, lat, lon, comment, tipo)
+                sendPostRequest(currentPhotoPath, lat, lon, comment, tipo, selectedArea)
             }
         }
     }
