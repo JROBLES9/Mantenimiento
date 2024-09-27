@@ -29,6 +29,9 @@ import android.provider.MediaStore
 import android.location.Location
 import android.net.Uri
 import android.util.Log
+import android.widget.ArrayAdapter
+import android.widget.EditText
+import android.widget.Spinner
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.FileProvider
@@ -36,6 +39,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -46,6 +51,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var textViewLatLong: TextView
     private lateinit var locationManager: LocationManager
     private lateinit var currentPhotoPath: String
+    private lateinit var spinnerTipoMantenimiento: Spinner
+    private lateinit var spinnerUbicacion: Spinner
+    private lateinit var editTextComentario: EditText
+
     private val client = OkHttpClient()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -62,6 +71,13 @@ class MainActivity : AppCompatActivity() {
         textViewLatLong = findViewById(R.id.textViewLatLong)
         locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
 
+        spinnerTipoMantenimiento = findViewById(R.id.tipoMantenimiento)
+        spinnerUbicacion = findViewById(R.id.ubicacion)
+        editTextComentario = findViewById(R.id.Comentario)
+
+        loadTipoMantenimiento()
+        loadUbicaciones()
+
         val buttonTomarF: Button = findViewById(R.id.buttonTomafF)
         buttonTomarF.setOnClickListener {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
@@ -72,24 +88,63 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun sendPostRequest(imagePath: String) {
+    data class TipoMantenimiento(val id: Int, val nombre: String) {
+        override fun toString(): String {
+            return nombre
+        }
+    }
+
+    data class Ubicacion(val id: Int, val descripcion: String) {
+        override fun toString(): String {
+            return descripcion
+        }
+    }
+
+
+    private fun parseTipoMantenimiento(json: String?): List<TipoMantenimiento> {
+        val tiposMantenimiento = mutableListOf<TipoMantenimiento>()
+        json?.let {
+            val jsonArray = JSONArray(it)
+            for (i in 0 until jsonArray.length()) {
+                val jsonObject = jsonArray.getJSONObject(i)
+                val id = jsonObject.getInt("IdTipoMantenimiento")
+                val nombre = jsonObject.getString("NombreMantenimiento")
+                tiposMantenimiento.add(TipoMantenimiento(id, nombre))
+            }
+        }
+        return tiposMantenimiento
+    }
+
+    private fun parseUbicaciones(json: String?): List<Ubicacion> {
+        val ubicaciones = mutableListOf<Ubicacion>()
+        json?.let {
+            val jsonArray = JSONArray(it)
+            for (i in 0 until jsonArray.length()) {
+                val jsonObject = jsonArray.getJSONObject(i)
+                val id = jsonObject.getInt("IdUbicaciones")
+                val descripcion = jsonObject.getString("NombreUbicacion")
+                ubicaciones.add(Ubicacion(id, descripcion))
+            }
+        }
+        return ubicaciones
+    }
+
+
+    private fun loadTipoMantenimiento() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val imageBytes = resizeImage(imagePath, 1024, 1024)
-                val imageBase64 = Base64.encodeToString(imageBytes, Base64.NO_WRAP) // Use NO_WRAP to avoid control characters
-                Log.d("imageBase64", imageBase64)
-                val json = """{"data": "${imageBase64.replace("\n", "\\n").replace("\r", "\\r")}"}""" // Escape newlines and carriage returns
-                val requestBody: RequestBody = json.toRequestBody("application/json".toMediaTypeOrNull())
                 val request = Request.Builder()
-                    .url("https://bfkx72r7-3000.use.devtunnels.ms/")
-                    .post(requestBody)
+                    .url("https://bfkx72r7-3000.use.devtunnels.ms/tipoMantenimiento/")
                     .build()
 
                 client.newCall(request).execute().use { response ->
-                    if (!response.isSuccessful) throw IOException("Unexpected code $response")
+                    if (!response.isSuccessful) throw IOException("Error al obtener tipos de mantenimiento: $response")
                     val responseBody = response.body?.string()
+                    val tiposMantenimiento = parseTipoMantenimiento(responseBody)
                     withContext(Dispatchers.Main) {
-                        Toast.makeText(this@MainActivity, responseBody, Toast.LENGTH_LONG).show()
+                        val adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_item, tiposMantenimiento)
+                        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                        spinnerTipoMantenimiento.adapter = adapter
                     }
                 }
             } catch (e: Exception) {
@@ -98,7 +153,90 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-        private fun resizeImage(imagePath: String, width: Int, height: Int): ByteArray {
+    private fun loadUbicaciones() {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val request = Request.Builder()
+                    .url("https://bfkx72r7-3000.use.devtunnels.ms/ubicacion/")
+                    .build()
+
+                client.newCall(request).execute().use { response ->
+                    if (!response.isSuccessful) throw IOException("Error al obtener ubicaciones: $response")
+                    val responseBody = response.body?.string()
+                    val ubicaciones = parseUbicaciones(responseBody)
+                    withContext(Dispatchers.Main) {
+                        val adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_item, ubicaciones)
+                        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+                        spinnerUbicacion.adapter = adapter
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+
+    private fun sendPostRequest(imagePath: String, latitude: Double?, longitude: Double?) {
+        // Recuperar los IDs y el comentario
+        val tipoMantenimientoSeleccionado = spinnerTipoMantenimiento.selectedItem as? TipoMantenimiento
+        val ubicacionSeleccionada = spinnerUbicacion.selectedItem as? Ubicacion
+        val comentario = editTextComentario.text.toString()
+
+        // Validar que los datos necesarios no sean nulos
+        if (tipoMantenimientoSeleccionado == null || ubicacionSeleccionada == null || latitude == null || longitude == null) {
+            runOnUiThread {
+                Toast.makeText(this, "Faltan datos necesarios para enviar la solicitud.", Toast.LENGTH_SHORT).show()
+            }
+            return
+        }
+
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val imageBytes = resizeImage(imagePath, 1024, 1024)
+                val imageBase64 = Base64.encodeToString(imageBytes, Base64.NO_WRAP)
+                Log.d("MainActivity", "imageBase64: $imageBase64")
+
+                // Construir el JSON utilizando JSONObject
+                val json = JSONObject().apply {
+                    put("IdTipoMantenimiento", tipoMantenimientoSeleccionado.id)
+                    put("IdUbicacion", ubicacionSeleccionada.id)
+                    put("Comentario", comentario)
+                    put("IdUsuario", 3)
+                    put("image", imageBase64)
+                    put("lat", latitude.toString())
+                    put("longitud", longitude.toString())
+                }
+
+                Log.d("MainActivity", "JSON Enviado: ${json.toString()}")
+
+                val requestBody: RequestBody = json.toString().toRequestBody("application/json".toMediaTypeOrNull())
+                val request = Request.Builder()
+                    .url("https://bfkx72r7-3000.use.devtunnels.ms/fotoMantenimiento/")
+                    .post(requestBody)
+                    .build()
+
+                client.newCall(request).execute().use { response ->
+                    val responseBody = response.body?.string()
+                    Log.d("MainActivity", "Respuesta: $responseBody")
+                    if (!response.isSuccessful) throw IOException("Código inesperado $response")
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@MainActivity, responseBody, Toast.LENGTH_LONG).show()
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@MainActivity, "Error al enviar los datos: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+
+
+
+    private fun resizeImage(imagePath: String, width: Int, height: Int): ByteArray {
             val bitmap = BitmapFactory.decodeFile(imagePath)
             val resizedBitmap = Bitmap.createScaledBitmap(bitmap, width, height, true)
             val outputStream = ByteArrayOutputStream()
@@ -124,10 +262,31 @@ class MainActivity : AppCompatActivity() {
         if (result.resultCode == Activity.RESULT_OK) {
             val imageBitmap = BitmapFactory.decodeFile(currentPhotoPath)
             imageView.setImageBitmap(imageBitmap)
-            getLocation()
-            sendPostRequest(currentPhotoPath)
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                try {
+                    val location: Location? = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                    if (location != null) {
+                        val lat = location.latitude
+                        val lon = location.longitude
+                        textViewLatLong.text = "($lat, $lon)"
+                        Log.d("MainActivity", "Latitud: $lat, Longitud: $lon")
+                        sendPostRequest(currentPhotoPath, lat, lon)
+                    } else {
+                        // Si la ubicación es null, mostrar mensaje y no enviar la solicitud
+                        runOnUiThread {
+                            Toast.makeText(this, "No se pudo obtener la ubicación actual.", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                } catch (e: SecurityException) {
+                    e.printStackTrace()
+                    Toast.makeText(this, "Permiso de ubicación denegado.", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), REQUEST_LOCATION_PERMISSION)
+            }
         }
     }
+
 
     private fun openCamera() {
         val photoFile: File? = createImageFile()
@@ -149,11 +308,16 @@ class MainActivity : AppCompatActivity() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), REQUEST_LOCATION_PERMISSION)
         } else {
-            val location: Location? = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
-            location?.let {
-                val lat = it.latitude
-                val lon = it.longitude
-                textViewLatLong.text = "($lat, $lon)"
+            try {
+                val location: Location? = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+                location?.let {
+                    val lat = it.latitude
+                    val lon = it.longitude
+                    textViewLatLong.text = "($lat, $lon)"
+                }
+            } catch (e: SecurityException) {
+                e.printStackTrace()
+                Toast.makeText(this, "Permiso de ubicación denegado.", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -164,15 +328,20 @@ class MainActivity : AppCompatActivity() {
             REQUEST_CAMERA_PERMISSION -> {
                 if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
                     openCamera()
+                } else {
+                    Toast.makeText(this, "El permiso de cámara es necesario para tomar fotos.", Toast.LENGTH_SHORT).show()
                 }
             }
             REQUEST_LOCATION_PERMISSION -> {
                 if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
                     getLocation()
+                } else {
+                    Toast.makeText(this, "El permiso de ubicación es necesario para acceder a la ubicación.", Toast.LENGTH_SHORT).show()
                 }
             }
         }
     }
+
 
     companion object {
         private const val REQUEST_CAMERA_PERMISSION = 1
