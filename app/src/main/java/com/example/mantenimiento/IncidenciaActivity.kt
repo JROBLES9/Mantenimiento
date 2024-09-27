@@ -43,23 +43,21 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-class MainActivity : AppCompatActivity() {
+class IncidenciaActivity : AppCompatActivity() {
     private lateinit var imageView: ImageView
     private lateinit var textViewLatLong: TextView
     private lateinit var locationManager: LocationManager
     private lateinit var currentPhotoPath: String
     private val client = OkHttpClient()
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContentView(R.layout.activity_main)
+        setContentView(R.layout.incidencia)
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
-
 
         textViewLatLong = findViewById(R.id.textViewLatLong)
         locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
@@ -74,19 +72,19 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun sendPostRequest(imagePath: String, lat: Double, lon: Double,  comment: String, tipo: String)  {
+    private fun sendPostRequest(imagePath: String, lat: Double, lon: Double, comment: String, tipo: String) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val imageBytes = resizeImage(imagePath, 1024, 1024)
-                val imageBase64 = Base64.encodeToString(imageBytes, Base64.NO_WRAP) // Use NO_WRAP to avoid control characters
+                val imageBase64 = Base64.encodeToString(imageBytes, Base64.NO_WRAP)
                 Log.d("imageBase64", imageBase64)
                 val json = """{
-                "data": "${imageBase64.replace("\n", "\\n").replace("\r", "\\r")}",
-                "lat": $lat,
-                "longitude": $lon,
-                "Comentario": "$comment",
-                "IdTipoMantenimiento": "$tipo"
-            }""" // Escape newlines and carriage returns
+                    "data": "${imageBase64.replace("\n", "\\n").replace("\r", "\\r")}",
+                    "lat": $lat,
+                    "longitud": $lon,
+                    "Comentario": "$comment",
+                    "IdTipoIncidencia": "$tipo"
+                }"""
                 val requestBody: RequestBody = json.toRequestBody("application/json".toMediaTypeOrNull())
                 val request = Request.Builder()
                     .url("https://bfkx72r7-3000.use.devtunnels.ms/")
@@ -97,7 +95,7 @@ class MainActivity : AppCompatActivity() {
                     if (!response.isSuccessful) throw IOException("Unexpected code $response")
                     val responseBody = response.body?.string()
                     withContext(Dispatchers.Main) {
-                        Toast.makeText(this@MainActivity, responseBody, Toast.LENGTH_LONG).show()
+                        Toast.makeText(this@IncidenciaActivity, responseBody, Toast.LENGTH_LONG).show()
                     }
                 }
             } catch (e: Exception) {
@@ -106,13 +104,13 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-        private fun resizeImage(imagePath: String, width: Int, height: Int): ByteArray {
-            val bitmap = BitmapFactory.decodeFile(imagePath)
-            val resizedBitmap = Bitmap.createScaledBitmap(bitmap, width, height, true)
-            val outputStream = ByteArrayOutputStream()
-            resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
-            return outputStream.toByteArray()
-        }
+    private fun resizeImage(imagePath: String, width: Int, height: Int): ByteArray {
+        val bitmap = BitmapFactory.decodeFile(imagePath)
+        val resizedBitmap = Bitmap.createScaledBitmap(bitmap, width, height, true)
+        val outputStream = ByteArrayOutputStream()
+        resizedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+        return outputStream.toByteArray()
+    }
 
     private fun createImageFile(): File? {
         val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
@@ -162,10 +160,8 @@ class MainActivity : AppCompatActivity() {
                 val lon = it.longitude
                 textViewLatLong.text = "($lat, $lon)"
 
-                //otros datos
-
                 val comment = findViewById<EditText>(R.id.commentEditText).text.toString()
-                val tipo = findViewById<Spinner>(R.id.tipoSpinner).selectedItem.toString()
+                val tipo = findViewById<Spinner>(R.id.incidenciaSpinner).selectedItem.toString()
 
                 sendPostRequest(currentPhotoPath, lat, lon, comment, tipo)
             }
@@ -191,7 +187,6 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val REQUEST_CAMERA_PERMISSION = 1
         private const val REQUEST_LOCATION_PERMISSION = 2
+
     }
-
-
 }
