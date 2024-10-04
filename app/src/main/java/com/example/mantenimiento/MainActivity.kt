@@ -138,8 +138,11 @@ class MainActivity : AppCompatActivity() {
                     .build()
 
                 client.newCall(request).execute().use { response ->
-                    if (!response.isSuccessful) throw IOException("Error al obtener tipos de mantenimiento: $response")
                     val responseBody = response.body?.string()
+//                    Log.d("MainActivity", "Código de respuesta tipoMantenimiento: ${response.code}")
+//                    Log.d("MainActivity", "Cuerpo de respuesta tipoMantenimiento: $responseBody")
+                    if (!response.isSuccessful) throw IOException("Error al obtener tipos de mantenimiento: $response")
+
                     val tiposMantenimiento = parseTipoMantenimiento(responseBody)
                     withContext(Dispatchers.Main) {
                         val adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_item, tiposMantenimiento)
@@ -161,8 +164,11 @@ class MainActivity : AppCompatActivity() {
                     .build()
 
                 client.newCall(request).execute().use { response ->
-                    if (!response.isSuccessful) throw IOException("Error al obtener ubicaciones: $response")
                     val responseBody = response.body?.string()
+//                    Log.d("MainActivity", "Código de respuesta ubicaciones: ${response.code}")
+//                    Log.d("MainActivity", "Cuerpo de respuesta ubicaciones: $responseBody")
+                    if (!response.isSuccessful) throw IOException("Error al obtener ubicaciones: $response")
+
                     val ubicaciones = parseUbicaciones(responseBody)
                     withContext(Dispatchers.Main) {
                         val adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_item, ubicaciones)
@@ -175,6 +181,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+
 
 
     private fun sendPostRequest(imagePath: String, latitude: Double?, longitude: Double?) {
@@ -223,6 +230,8 @@ class MainActivity : AppCompatActivity() {
                     withContext(Dispatchers.Main) {
                         Toast.makeText(this@MainActivity, responseBody, Toast.LENGTH_LONG).show()
                     }
+                    Log.d("MainActivity", "Código de respuesta post mantenimiento: ${response.code}")
+                    Log.d("MainActivity", "Cuerpo de respuesta post mantenimiento: $responseBody")
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
